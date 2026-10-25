@@ -8,11 +8,14 @@
         "responseMode": "lastNode",
         "options": {}
       },
-      "id": "a1b2c3d4-0001-4000-8000-000000000001",
+      "id": "752c47d5-bf7b-440a-8e7e-1cac01cc161f",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 0],
+      "position": [
+        0,
+        0
+      ],
       "webhookId": "clientes-investimentos"
     },
     {
@@ -21,39 +24,69 @@
         "options": {
           "response": {
             "response": {
-              "responseFormat": "text",
-              "outputPropertyName": "data"
+              "responseFormat": "text"
             }
           }
         }
       },
-      "id": "a1b2c3d4-0002-4000-8000-000000000002",
+      "id": "a2f4639a-ea19-4295-a3e2-9eb653384506",
       "name": "Buscar Investimentos (CSV)",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [240, 0]
+      "position": [
+        240,
+        0
+      ]
     },
     {
       "parameters": {
         "jsCode": "// Cruza clientes (vindos do Webhook) com as opcoes do CSV e gera mensagens estaticas por perfil.\nconst webhook = $('Webhook').first().json;\nconst body = webhook.body;\nconst clientes = Array.isArray(body) ? body : (body.clientes || []);\n\nconst norm = (s) => String(s || '').normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').toLowerCase().trim();\n\n// ---- parse do CSV (aceita , ou ;) ----\nconst csvText = String($input.first().json.data || '').replace(/^\\uFEFF/, '');\nconst linhas = csvText.split(/\\r?\\n/).filter((l) => l.trim() !== '');\nconst delim = (linhas[0] || '').split(';').length > (linhas[0] || '').split(',').length ? ';' : ',';\nconst cabecalho = (linhas[0] || '').split(delim).map((h) => norm(h));\nconst opcoes = linhas.slice(1).map((l) => {\n  const cols = l.split(delim).map((c) => c.trim());\n  const obj = {};\n  cabecalho.forEach((h, i) => (obj[h] = cols[i]));\n  return obj;\n});\n\nconst colPerfil = cabecalho.find((h) => h.includes('perfil')) || cabecalho[0];\nconst colNome = cabecalho.find((h) => /(nome|produto|investimento|ativo|opcao)/.test(h) && h !== colPerfil) || cabecalho[1];\nconst colRisco = cabecalho.find((h) => h.includes('risco'));\nconst colRet = cabecalho.find((h) => /(rent|retorno)/.test(h));\n\nconst descrever = (o) => {\n  let t = o[colNome];\n  const extras = [];\n  if (colRet && o[colRet]) extras.push('rentabilidade ' + o[colRet]);\n  if (colRisco && o[colRisco]) extras.push('risco ' + o[colRisco]);\n  return extras.length ? `${t} (${extras.join(', ')})` : t;\n};\n\n// ---- templates estaticos (MVP) ----\nconst templates = {\n  conservador: (c, lista) => `Ola, ${c.nome}! Com seu saldo de ${c.saldo}, o foco e seguranca e previsibilidade. Para o seu perfil conservador, sugerimos renda fixa: ${lista}.`,\n  moderado: (c, lista) => `Ola, ${c.nome}! Com seu saldo de ${c.saldo}, o ideal e equilibrar. Para o seu perfil moderado, sugerimos um mix de renda fixa e variavel: ${lista}.`,\n  arrojado: (c, lista) => `Ola, ${c.nome}! Com seu saldo de ${c.saldo}, voce pode buscar mais retorno. Para o seu perfil arrojado, sugerimos mais exposicao a acoes e renda variavel: ${lista}.`\n};\n\nreturn clientes.map((c) => {\n  const perfil = norm(c.perfil);\n  const doPerfil = opcoes.filter((o) => norm(o[colPerfil]) === perfil);\n  const lista = doPerfil.length ? doPerfil.map(descrever).join('; ') : 'consulte nosso time para opcoes sob medida';\n  const gerar = templates[perfil] || ((cl, l) => `Ola, ${cl.nome}! Temos opcoes de investimento para voce: ${l}.`);\n  return {\n    json: {\n      nome: c.nome,\n      email: c.email,\n      saldo: c.saldo,\n      perfil: c.perfil,\n      mensagem: gerar(c, lista)\n    }\n  };\n});"
       },
-      "id": "a1b2c3d4-0003-4000-8000-000000000003",
+      "id": "4d20cf1b-2faf-4967-b8b8-1e5ea44ecf16",
       "name": "Cruzar e Gerar Mensagem",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [480, 0]
+      "position": [
+        480,
+        0
+      ]
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Buscar Investimentos (CSV)", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Buscar Investimentos (CSV)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Buscar Investimentos (CSV)": {
-      "main": [[{ "node": "Cruzar e Gerar Mensagem", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Cruzar e Gerar Mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
-  "settings": { "executionOrder": "v1" },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "323fef3a-7fe2-4c95-8dc9-6895e21d70e0",
+  "meta": {
+    "instanceId": "675596daf1a3a5693b9da191ed37949a1e22d065924b275bee3ec158a9d820b4"
+  },
+  "nodeGroups": [],
+  "id": "XaBe1GlD9tVu7dim",
   "tags": []
 }
-
